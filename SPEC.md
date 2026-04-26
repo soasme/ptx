@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.1.0**
+**Version 1.2.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -150,12 +150,46 @@ frame walk_2
 
 A layer named `thinking` (or prefixed `thinking_`) is a **non-rendered** sketch layer. It exists only as a model aid for reasoning about overall shape or composition. It is stripped at export time and never participates in compositing, regardless of `order` or `blend`.
 
+Thinking layers carry explicit metadata so parsers and models know exactly what the grid represents:
+
 ```
-[layer thinking]
-# Low-res 8x8 outline sketch — model use only, never rendered
+[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
 ```
 
-Thinking layers may use a coarser grid (e.g., each symbol = 4×4 or 8×8 pixels) to give the model a "mental map" of the full sprite at a glance, without reasoning over thousands of individual pixels.
+| Attribute | Description | Default |
+|---|---|---|
+| `render` | Must be `false`. Marks this layer as non-rendered and export-stripped. | required |
+| `scale` | Each symbol in this layer's chunks represents an `N×N` block of real pixels. | `1` |
+| `size` | Grid dimensions for this layer's chunks in symbols (not pixels). `WxH` where `W = sprite_width / scale`, `H = sprite_height / scale`. | derived |
+| `purpose` | Free-form label describing what this layer models. Parsers ignore it; models use it. | — |
+
+**`scale` and real pixels:** A thinking layer with `scale=4` on a 128×128 sprite uses a 32×32 symbol grid. Each symbol covers a 4×4 pixel block. The layer gives a model a full-sprite overview in 1024 symbols instead of 16384.
+
+**`size` is advisory but explicit.** If `size` is omitted, parsers derive it as `(sprite_width / scale) x (sprite_height / scale)`. If provided, it must match — a mismatch is a validation error.
+
+**`render=false` is mandatory** on thinking layers. Parsers must reject any layer named `thinking` or `thinking_*` that omits `render=false`, to prevent accidental export.
+
+**`purpose`** is a model-readable label. Suggested values: `whole_sprite_silhouette`, `chunk_layout`, `animation_key_pose`, `color_zones`. Any value is valid; it is never interpreted by parsers.
+
+```
+[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
+# Each symbol = 4×4 real pixels. 32×32 grid covers full 128×128 sprite.
+# K = dark mass, W = skin, . = empty
+
+[chunk thinking_full x=0 y=0 w=32 h=32 layer=thinking]
+................................
+................................
+.............KKKKKK.............
+...........KKWWWWWWKK...........
+...........KWWWWWWWWK...........
+.............KKKKKK.............
+...........KKKRRRRKKKK..........
+.........KKKRRRRRRRRKKKK........
+................................
+................................
+```
+
+Thinking layers are skipped entirely in the render pipeline (step 4 of the render order summary).
 
 ### Render order summary
 
@@ -262,10 +296,9 @@ idle_1 120ms
 walk_1  90ms
 walk_2  90ms
 
-# Thinking layer — 4×4 pixel blocks, 32×32 symbols = full sprite overview
-[layer thinking]
-# Each symbol here represents a 4×4 block of real pixels.
-# Use for shape sketching only. Never rendered.
+# Thinking layer — scale=4 means each symbol = 4×4 real pixels
+# 32×32 symbol grid covers the full 128×128 sprite
+[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
 
 [layer fill    order=10 blend=normal]
 frame walk_1
@@ -397,6 +430,15 @@ A coding model can be asked to "change the torso color from red to blue in frame
 ---
 
 ## Changelog
+
+### 1.2.0
+- Thinking layer attributes are now explicit and parser-enforceable:
+  - `render=false` — required; parsers reject `thinking`/`thinking_*` layers that omit it
+  - `scale=N` — each symbol covers an N×N block of real pixels (default `1`)
+  - `size=WxH` — grid dimensions in symbols; must match `sprite_size / scale` if provided
+  - `purpose=<label>` — model-readable intent hint; ignored by parsers
+- Removed the vague "may use a coarser grid" language — scale is now mandatory-explicit
+- Validation: `size` mismatch with derived dimensions is an error
 
 ### 1.1.0
 - Layer `order` attribute: explicit integer render order (bottom = low, top = high)
