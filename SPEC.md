@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.0.0**
+**Version 1.1.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -73,8 +73,8 @@ r #9f1f1f
 - One entry per line: `<symbol> <color>`
 - `<color>` is `transparent` or a CSS hex color (`#rrggbb` or `#rrggbbaa`)
 - `.` (dot) conventionally means transparent; redefining it is allowed
-- Symbol pool: `. a-z A-Z 0-9 [ ] { } # % ^ * + = _ \ | ~ < > £ € , . ? ! ' - / : ; ( ) $ & @`
-  This gives up to ~90 distinct colors per file
+- Symbol pool: `. a-z A-Z 0-9 @ % ^ * + = _ | ~ < > [ ] { } ? ! - / : ; ( ) $ &`
+  This gives up to 84 distinct colors per file
 
 ---
 
@@ -97,20 +97,58 @@ Each line: `<frame_name> <duration>`. Duration is an integer followed by `ms`.
 
 Declares a named layer. Layer content is provided by the chunks that reference it.
 
-```
-[layer outline]
-frame walk_1
+### Layer attributes
 
-[layer fill]
+```
+[layer <name> order=<n> blend=<mode>]
+```
+
+| Attribute | Description | Default |
+|---|---|---|
+| `order` | Render order integer. Lower numbers render first (bottom). Higher numbers render on top. | Declaration order (0-based) |
+| `blend` | Compositing mode for this layer onto the result below it. | `normal` |
+| `frame` | (body line) Restrict this layer to specific frames. Repeatable. | all frames |
+
+**`order`** is the authoritative render sequence. Declaration order in the file is the fallback when `order` is omitted. Explicit `order` values need not be contiguous — using multiples of 10 leaves room for insertions without renumbering.
+
+```
+[layer shadow  order=10 blend=multiply]
+[layer fill    order=20 blend=normal]
+[layer outline order=30 blend=normal]
+[layer light   order=40 blend=screen]
+[layer fx      order=50 blend=add]
+```
+
+Layers are composited bottom-up: `shadow` → `fill` → `outline` → `light` → `fx`.
+
+### Blend modes
+
+| Mode | Description |
+|---|---|
+| `normal` | Standard alpha compositing (Porter-Duff over). Default. |
+| `multiply` | Multiplies pixel values. Darkens; transparent pixels pass through. |
+| `screen` | Inverse multiply. Brightens; good for light/glow effects. |
+| `overlay` | Multiply where base is dark, screen where base is light. |
+| `add` | Additive blend. Pixels add up; clamps to white. Good for fire/sparks. |
+| `subtract` | Subtracts layer from base. Clamps to black. |
+| `replace` | Replaces every pixel in the layer region, ignoring alpha. |
+| `erase` | Cuts the layer's painted pixels out of the layers below it. |
+
+Blend modes apply per-pixel. Transparent pixels (`.` or `#rrggbb00`) in any layer are always a no-op regardless of blend mode.
+
+### Frame restriction
+
+Optional `frame` body lines restrict a layer to specific frames. Omitting all `frame` lines means the layer applies to every frame.
+
+```
+[layer outline order=30 blend=normal]
 frame walk_1
 frame walk_2
 ```
 
-Optional `frame` lines restrict the layer to specific frames. Omitting `frame` lines means the layer applies to all frames.
-
 ### Thinking Layer
 
-A layer named `thinking` (or prefixed `thinking_`) is a **non-rendered** sketch layer. It exists only as a model aid for reasoning about overall shape or composition. It is stripped at export time.
+A layer named `thinking` (or prefixed `thinking_`) is a **non-rendered** sketch layer. It exists only as a model aid for reasoning about overall shape or composition. It is stripped at export time and never participates in compositing, regardless of `order` or `blend`.
 
 ```
 [layer thinking]
@@ -118,6 +156,14 @@ A layer named `thinking` (or prefixed `thinking_`) is a **non-rendered** sketch 
 ```
 
 Thinking layers may use a coarser grid (e.g., each symbol = 4×4 or 8×8 pixels) to give the model a "mental map" of the full sprite at a glance, without reasoning over thousands of individual pixels.
+
+### Render order summary
+
+1. Start with the sprite background color from `[meta]`
+2. Sort all non-thinking layers by `order` ascending
+3. For each layer (bottom to top): composite its chunks onto the canvas using `blend`
+4. Thinking layers are skipped entirely
+5. Output the final composited canvas per frame
 
 ---
 
@@ -221,13 +267,15 @@ walk_2  90ms
 # Each symbol here represents a 4×4 block of real pixels.
 # Use for shape sketching only. Never rendered.
 
-[layer outline]
+[layer fill    order=10 blend=normal]
 frame walk_1
 frame walk_2
 
-[layer fill]
+[layer outline order=20 blend=normal]
 frame walk_1
 frame walk_2
+
+[layer light   order=30 blend=screen]
 
 # --- walk_1 frame, outline layer ---
 
@@ -333,6 +381,8 @@ A coding model can be asked to "change the torso color from red to blue in frame
 6. `tile_size` must be between 1 and 32 inclusive
 7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
 8. Frame names referenced in chunks must be declared in `[frames]`
+9. Two layers may not share the same `order` value
+10. `blend` must be one of: `normal multiply screen overlay add subtract replace erase`
 
 ---
 
@@ -347,6 +397,13 @@ A coding model can be asked to "change the torso color from red to blue in frame
 ---
 
 ## Changelog
+
+### 1.1.0
+- Layer `order` attribute: explicit integer render order (bottom = low, top = high)
+- Layer `blend` attribute: 8 compositing modes (`normal`, `multiply`, `screen`, `overlay`, `add`, `subtract`, `replace`, `erase`)
+- Render order summary: deterministic bottom-up compositing pipeline
+- Corrected safe symbol pool (removed ambiguous/non-ASCII characters: `# \ ~ £ € , ' "`)
+- Validation rules 9–10: unique `order` values, valid `blend` values
 
 ### 1.0.0
 - Initial specification
