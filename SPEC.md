@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.2.0**
+**Version 1.3.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -107,6 +107,7 @@ Declares a named layer. Layer content is provided by the chunks that reference i
 |---|---|---|
 | `order` | Render order integer. Lower numbers render first (bottom). Higher numbers render on top. | Declaration order (0-based) |
 | `blend` | Compositing mode for this layer onto the result below it. | `normal` |
+| `visible` | Whether the layer is included in rendering. `true` or `false`. | `true` |
 | `frame` | (body line) Restrict this layer to specific frames. Repeatable. | all frames |
 
 **`order`** is the authoritative render sequence. Declaration order in the file is the fallback when `order` is omitted. Explicit `order` values need not be contiguous — using multiples of 10 leaves room for insertions without renumbering.
@@ -120,6 +121,16 @@ Declares a named layer. Layer content is provided by the chunks that reference i
 ```
 
 Layers are composited bottom-up: `shadow` → `fill` → `outline` → `light` → `fx`.
+
+**`visible`** controls whether a layer participates in rendering at all. A hidden layer (`visible=false`) is preserved in the file — its chunks remain intact — but is skipped during compositing, the same as if the layer did not exist. This is useful for work-in-progress layers, reference layers, and toggling detail passes without deleting data.
+
+```
+[layer sketch order=5 blend=normal visible=false]
+[layer shadow order=10 blend=multiply]
+[layer fill   order=20 blend=normal]
+```
+
+Here `sketch` is kept in the file for reference but never renders.
 
 ### Blend modes
 
@@ -195,9 +206,10 @@ Thinking layers are skipped entirely in the render pipeline (step 4 of the rende
 
 1. Start with the sprite background color from `[meta]`
 2. Sort all non-thinking layers by `order` ascending
-3. For each layer (bottom to top): composite its chunks onto the canvas using `blend`
-4. Thinking layers are skipped entirely
-5. Output the final composited canvas per frame
+3. Skip layers where `visible=false`
+4. For each remaining layer (bottom to top): composite its chunks onto the canvas using `blend`
+5. Thinking layers are skipped entirely
+6. Output the final composited canvas per frame
 
 ---
 
@@ -416,6 +428,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 8. Frame names referenced in chunks must be declared in `[frames]`
 9. Two layers may not share the same `order` value
 10. `blend` must be one of: `normal multiply screen overlay add subtract replace erase`
+11. `visible` must be `true` or `false` if present
 
 ---
 
@@ -431,26 +444,4 @@ A coding model can be asked to "change the torso color from red to blue in frame
 
 ## Changelog
 
-### 1.2.0
-- Thinking layer attributes are now explicit and parser-enforceable:
-  - `render=false` — required; parsers reject `thinking`/`thinking_*` layers that omit it
-  - `scale=N` — each symbol covers an N×N block of real pixels (default `1`)
-  - `size=WxH` — grid dimensions in symbols; must match `sprite_size / scale` if provided
-  - `purpose=<label>` — model-readable intent hint; ignored by parsers
-- Removed the vague "may use a coarser grid" language — scale is now mandatory-explicit
-- Validation: `size` mismatch with derived dimensions is an error
-
-### 1.1.0
-- Layer `order` attribute: explicit integer render order (bottom = low, top = high)
-- Layer `blend` attribute: 8 compositing modes (`normal`, `multiply`, `screen`, `overlay`, `add`, `subtract`, `replace`, `erase`)
-- Render order summary: deterministic bottom-up compositing pipeline
-- Corrected safe symbol pool (removed ambiguous/non-ASCII characters: `# \ ~ £ € , ' "`)
-- Validation rules 9–10: unique `order` values, valid `blend` values
-
-### 1.0.0
-- Initial specification
-- Palette-index grid encoding
-- Layer and frame support
-- Chunk system with 32×32 maximum, spatial and semantic addressing
-- Thinking layer (non-rendered model aid)
-- Diff/patch tooling compatibility
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
