@@ -4,6 +4,15 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.1
+
+- Color format is now strictly defined as 32-bit RGBA: `#rrggbbaa`, 8 lowercase hex digits.
+- **Regex:** `^#[0-9a-f]{8}$` — uppercase letters are invalid.
+- `transparent` is a canonical alias for `#00000000`. Valid anywhere a color is expected.
+- Removed shorthand `#rrggbb` (6-digit) support — all colors must include the alpha channel explicitly.
+- All palette examples updated to 8-digit form (e.g. `#000000ff`).
+- Validation rule 15: every color value must match `^#[0-9a-f]{8}$` or be `transparent`.
+
 ## 1.4.0
 
 - Frames are now declared as individual `[frame <name> duration=<ms>]` headers instead of rows inside a `[frames]` block. Duration is an integer number of milliseconds (e.g. `duration=120`).

@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.0**
+**Version 1.4.1**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -61,18 +61,45 @@ Maps single-character symbols to colors. Symbols are palette indices — a symbo
 ```
 [palette]
 . transparent
-K #000000
-W #ffffff
-R #ff3b30
-r #9f1f1f
-+ #ffd166
-@ #5c7cfa
+K #000000ff
+W #ffffffff
+R #ff3b30ff
+r #9f1f1fff
++ #ffd166ff
+@ #5c7cfaff
 ```
+
+### Color format
+
+A color is a 32-bit RGBA value written as an 8-digit lowercase hex string:
+
+```
+#rrggbbaa
+```
+
+- `rr` — red channel, `00`–`ff`
+- `gg` — green channel, `00`–`ff`
+- `bb` — blue channel, `00`–`ff`
+- `aa` — alpha channel, `00` (fully transparent) – `ff` (fully opaque)
+
+**Regex:** `^#[0-9a-f]{8}$`
+
+**Examples:**
+
+| Color | Value |
+|---|---|
+| Fully opaque turquoise | `#40e0d0ff` |
+| Fully opaque black | `#000000ff` |
+| 50% transparent red | `#ff000080` |
+| Fully transparent | `#00000000` |
+
+The keyword `transparent` is an alias for `#00000000`. It may be used anywhere a color value is expected.
 
 **Rules:**
 - One entry per line: `<symbol> <color>`
-- `<color>` is `transparent` or a CSS hex color (`#rrggbb` or `#rrggbbaa`)
-- `.` (dot) conventionally means transparent; redefining it is allowed
+- `<color>` is `transparent` or an 8-digit RGBA hex string matching `^#[0-9a-f]{8}$`
+- Uppercase hex letters are invalid — colors must be lowercase
+- `.` (dot) conventionally means `transparent`; redefining it is allowed
 - Symbol pool: `. a-z A-Z 0-9 @ % ^ * + = _ | ~ < > [ ] { } ? ! - / : ; ( ) $ &`
   This gives up to 84 distinct colors per file
 
@@ -135,7 +162,7 @@ Here `sketch` is kept in the file for reference but never renders.
 
 ### Blend modes
 
-Blend modes apply only to `normal` and `tilemap` layers. Transparent pixels (`.` or `#rrggbb00`) in any layer are always a no-op regardless of blend mode.
+Blend modes apply only to `normal` and `tilemap` layers. Transparent pixels (`transparent` / `#00000000`) in any layer are always a no-op regardless of blend mode.
 
 | Mode | Description |
 |---|---|
@@ -443,6 +470,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 12. `type` must be `normal`, `group`, or `tilemap` if present
 13. `opacity` must be a float in the range `0.0`–`1.0` if present
 14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
+15. Every `<color>` value must match `^#[0-9a-f]{8}$` or be the keyword `transparent`
 
 ---
 
