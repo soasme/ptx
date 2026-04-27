@@ -4,6 +4,15 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.0
+
+- Frames are now declared as individual `[frame <name> duration=<ms>]` headers instead of rows inside a `[frames]` block. Duration is an integer number of milliseconds (e.g. `duration=120`).
+- Layer `type` attribute: `normal` (default), `group`, or `tilemap`.
+- Layer `opacity` attribute: float `0.0`–`1.0` (default `1.0`).
+- `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error.
+- Blend modes expanded from 8 to 19: added `darken`, `lighten`, `color_dodge`, `color_burn`, `hard_light`, `soft_light`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity`, `addition`, `divide`; renamed `add` → `addition`; removed `replace` and `erase`.
+- Validation rules 12–14: layer `type` values, `opacity` range, and blend/opacity restriction on group layers.
+
 ## 1.3.0
 
 - Layer `visible` attribute: `true` (default) or `false`. Hidden layers are skipped in compositing but preserved in the file — chunks remain intact for reference, WIP, or toggling detail passes.

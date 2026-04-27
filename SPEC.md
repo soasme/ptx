@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.3.0**
+**Version 1.4.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -26,7 +26,7 @@ Blank lines and lines beginning with `#` are ignored (comments).
 ```
 [meta]
 [palette]
-[frames]          # optional — omit for static art
+[frame <name> duration=<ms>]   # one per frame — omit for static art
 [layer <name>]
 [chunk <id> ...]
 ```
@@ -78,18 +78,17 @@ r #9f1f1f
 
 ---
 
-## `[frames]`
+## `[frame <name> duration=<ms>]`
 
-Defines named frames and their display durations. Required for animated sprites; omit for static art.
+Declares a named frame and its display duration. Required for animated sprites; omit for static art. One header per frame.
 
 ```
-[frames]
-idle_1  120ms
-walk_1   90ms
-walk_2   90ms
+[frame idle_1 duration=120]
+[frame walk_1 duration=90]
+[frame walk_2 duration=90]
 ```
 
-Each line: `<frame_name> <duration>`. Duration is an integer followed by `ms`.
+`duration` is an integer number of milliseconds.
 
 ---
 
@@ -100,13 +99,15 @@ Declares a named layer. Layer content is provided by the chunks that reference i
 ### Layer attributes
 
 ```
-[layer <name> order=<n> blend=<mode>]
+[layer <name> order=<n> type=<type> blend=<mode> opacity=<f> visible=<bool>]
 ```
 
 | Attribute | Description | Default |
 |---|---|---|
 | `order` | Render order integer. Lower numbers render first (bottom). Higher numbers render on top. | Declaration order (0-based) |
-| `blend` | Compositing mode for this layer onto the result below it. | `normal` |
+| `type` | Layer type: `normal`, `group`, or `tilemap`. | `normal` |
+| `blend` | Compositing mode for this layer onto the result below it. Valid for `normal` and `tilemap` layers. | `normal` |
+| `opacity` | Layer opacity, `0.0`–`1.0`. Valid for `normal` and `tilemap` layers. | `1.0` |
 | `visible` | Whether the layer is included in rendering. `true` or `false`. | `true` |
 | `frame` | (body line) Restrict this layer to specific frames. Repeatable. | all frames |
 
@@ -117,7 +118,7 @@ Declares a named layer. Layer content is provided by the chunks that reference i
 [layer fill    order=20 blend=normal]
 [layer outline order=30 blend=normal]
 [layer light   order=40 blend=screen]
-[layer fx      order=50 blend=add]
+[layer fx      order=50 blend=addition]
 ```
 
 Layers are composited bottom-up: `shadow` → `fill` → `outline` → `light` → `fx`.
@@ -134,18 +135,29 @@ Here `sketch` is kept in the file for reference but never renders.
 
 ### Blend modes
 
+Blend modes apply only to `normal` and `tilemap` layers. Transparent pixels (`.` or `#rrggbb00`) in any layer are always a no-op regardless of blend mode.
+
 | Mode | Description |
 |---|---|
 | `normal` | Standard alpha compositing (Porter-Duff over). Default. |
 | `multiply` | Multiplies pixel values. Darkens; transparent pixels pass through. |
 | `screen` | Inverse multiply. Brightens; good for light/glow effects. |
 | `overlay` | Multiply where base is dark, screen where base is light. |
-| `add` | Additive blend. Pixels add up; clamps to white. Good for fire/sparks. |
+| `darken` | Keeps the darker of the two pixels per channel. |
+| `lighten` | Keeps the lighter of the two pixels per channel. |
+| `color_dodge` | Brightens the base by dividing by the inverse of the layer. |
+| `color_burn` | Darkens the base by dividing and inverting. |
+| `hard_light` | Multiply/screen based on the layer color rather than the base. |
+| `soft_light` | Softer version of hard light; subtle contrast adjustment. |
+| `difference` | Absolute difference between layer and base. |
+| `exclusion` | Similar to difference but lower contrast. |
+| `hue` | Hue of layer with saturation and luminosity of base. |
+| `saturation` | Saturation of layer with hue and luminosity of base. |
+| `color` | Hue and saturation of layer with luminosity of base. |
+| `luminosity` | Luminosity of layer with hue and saturation of base. |
+| `addition` | Additive blend. Pixels add up; clamps to white. Good for fire/sparks. |
 | `subtract` | Subtracts layer from base. Clamps to black. |
-| `replace` | Replaces every pixel in the layer region, ignoring alpha. |
-| `erase` | Cuts the layer's painted pixels out of the layers below it. |
-
-Blend modes apply per-pixel. Transparent pixels (`.` or `#rrggbb00`) in any layer are always a no-op regardless of blend mode.
+| `divide` | Divides base by layer per channel. Brightens. |
 
 ### Frame restriction
 
@@ -303,10 +315,9 @@ r #9f1f1f
 + #ffd166
 @ #5c7cfa
 
-[frames]
-idle_1 120ms
-walk_1  90ms
-walk_2  90ms
+[frame idle_1 duration=120]
+[frame walk_1 duration=90]
+[frame walk_2 duration=90]
 
 # Thinking layer — scale=4 means each symbol = 4×4 real pixels
 # 32×32 symbol grid covers the full 128×128 sprite
@@ -425,10 +436,13 @@ A coding model can be asked to "change the torso color from red to blue in frame
 5. Chunks must not overlap (within the same layer and frame)
 6. `tile_size` must be between 1 and 32 inclusive
 7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
-8. Frame names referenced in chunks must be declared in `[frames]`
+8. Frame names referenced in chunks must be declared as `[frame ...]` headers
 9. Two layers may not share the same `order` value
-10. `blend` must be one of: `normal multiply screen overlay add subtract replace erase`
+10. `blend` must be one of: `normal multiply screen overlay darken lighten color_dodge color_burn hard_light soft_light difference exclusion hue saturation color luminosity addition subtract divide`
 11. `visible` must be `true` or `false` if present
+12. `type` must be `normal`, `group`, or `tilemap` if present
+13. `opacity` must be a float in the range `0.0`–`1.0` if present
+14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
 
 ---
 
