@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.4**
+**Version 1.4.5**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -27,6 +27,7 @@ Blank lines and lines beginning with `#` are ignored (comments).
 [meta]
 [palette]
 [frame <name> duration=<ms>]   # one per frame — omit for static art
+[animation <name>]             # omit to use implicit default animation
 [layer <name>]
 [chunk <id> ...]
 ```
@@ -137,6 +138,54 @@ Declares a named frame and its display duration. Required for animated sprites; 
 ```
 
 `duration` is an integer number of milliseconds.
+
+---
+
+## `[animation <name>]`
+
+Declares a named animation — an ordered sequence of frames with a loop configuration.
+
+```
+[animation walk]
+frames walk_1,walk_2,walk_3
+loop_type forward
+loop_count +inf
+
+[animation run_burst]
+frames run_1,run_2,run_3
+loop_type ping_pong
+loop_count 3
+```
+
+| Field | Values | Default |
+|---|---|---|
+| `frames` | Comma-separated list of frame names defining playback order | required |
+| `loop_type` | `forward` \| `reverse` \| `ping_pong` \| `ping_pong_reverse` | `forward` |
+| `loop_count` | Positive integer or `+inf` | `+inf` |
+
+### Loop types
+
+| Mode | Playback |
+|---|---|
+| `forward` | Plays frames in the listed order, then repeats from the first frame. |
+| `reverse` | Plays frames in reverse order, then repeats from the last frame. |
+| `ping_pong` | Plays forward then backward; endpoint frames are not duplicated at the reversal. For frames A, B, C: plays A B C B A B C B … |
+| `ping_pong_reverse` | Like `ping_pong` but starts with the backward pass. For frames A, B, C: plays C B A B C B A B … |
+
+`loop_count` is the number of full cycles before the animation stops. `+inf` means the animation loops forever. A cycle for `ping_pong` and `ping_pong_reverse` is one complete forward-and-back pass.
+
+### Default animation
+
+If no `[animation]` section is present, an implicit animation named `default` is assumed:
+
+```
+[animation default]
+frames <all [frame] entries in declaration order>
+loop_type forward
+loop_count +inf
+```
+
+Files with no `[frame]` entries (static art) are unaffected — the implicit `default` animation has no frames and is never played.
 
 ---
 
@@ -496,6 +545,10 @@ A coding model can be asked to "change the torso color from red to blue in frame
 15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
 16. `bits_per_pixel` must be `8`, `16`, or `32` if present
 17. Palette symbols must not be `#`, `\`, `"`, or `'`
+18. Every frame name in an `[animation]` `frames` list must be declared as a `[frame ...]` header
+19. `loop_type` must be `forward`, `reverse`, `ping_pong`, or `ping_pong_reverse` if present
+20. `loop_count` must be a positive integer or `+inf` if present
+21. Animation names must be unique across the file
 
 ---
 

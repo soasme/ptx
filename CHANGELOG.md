@@ -4,6 +4,14 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.5
+
+- New `[animation <name>]` section: declares a named animation as an ordered frame sequence with `frames`, `loop_type`, and `loop_count` fields.
+- `loop_type` values: `forward`, `reverse`, `ping_pong`, `ping_pong_reverse`.
+- `loop_count`: positive integer or `+inf` (default `+inf`).
+- If no `[animation]` section is present, an implicit `default` animation is assumed: all declared frames in order, `loop_type forward`, `loop_count +inf`.
+- Validation rules 18–21 added: frame names in animations must be declared, `loop_type` must be a valid value, `loop_count` must be a positive integer or `+inf`, animation names must be unique.
+
 ## 1.4.4
 
 - `#`, `\`, `"`, and `'` are explicitly excluded from the palette symbol pool and are validation errors if used as symbols.
