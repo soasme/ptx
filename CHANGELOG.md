@@ -4,6 +4,14 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.2
+
+- Color type now supports three forms: `#rrggbbaa` (32-bit RGBA), `#rrggbb` (24-bit RGB, alpha inferred as `ff`), and lowercase CSS named colors (e.g. `transparent`, `green`, `cyan`).
+- Named colors resolve to CSS Color Level 4 `#rrggbbaa` equivalents; `transparent` = `#00000000`.
+- `[meta] background` now typed as color (was a freeform string).
+- Parsers must normalize all color forms to `#rrggbbaa` internally.
+- Validation rule 15 updated: accepts all three color forms.
+
 ## 1.4.1
 
 - Color format is now strictly defined as 32-bit RGBA: `#rrggbbaa`, 8 lowercase hex digits.

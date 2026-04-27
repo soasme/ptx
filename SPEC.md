@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.1**
+**Version 1.4.2**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -50,7 +50,7 @@ background transparent
 | `size` | `WxH` in pixels | required |
 | `type` | `static` \| `animated` | `static` |
 | `tile_size` | integer 1–32 | `32` |
-| `background` | `transparent` or `#rrggbb` | `transparent` |
+| `background` | color | `transparent` |
 
 ---
 
@@ -71,34 +71,50 @@ r #9f1f1fff
 
 ### Color format
 
-A color is a 32-bit RGBA value written as an 8-digit lowercase hex string:
+A color value is one of three forms:
 
+**1. 32-bit RGBA hex** — 8 lowercase hex digits, alpha explicit:
 ```
 #rrggbbaa
 ```
+Regex: `^#[0-9a-f]{8}$`
 
-- `rr` — red channel, `00`–`ff`
-- `gg` — green channel, `00`–`ff`
-- `bb` — blue channel, `00`–`ff`
-- `aa` — alpha channel, `00` (fully transparent) – `ff` (fully opaque)
+**2. 24-bit RGB hex** — 6 lowercase hex digits, alpha implicitly `ff` (fully opaque):
+```
+#rrggbb
+```
+Regex: `^#[0-9a-f]{6}$`
 
-**Regex:** `^#[0-9a-f]{8}$`
+**3. Named color** — a lowercase CSS color name:
+```
+transparent
+green
+cyan
+cornflowerblue
+```
+
+Named colors resolve to their CSS Color Level 4 `#rrggbbaa` equivalents. `transparent` is defined as `#00000000`. All other named colors have alpha `ff` (fully opaque) unless the name itself implies transparency.
+
+Uppercase hex letters are invalid in both hex forms. Named colors must be lowercase.
 
 **Examples:**
 
-| Color | Value |
-|---|---|
-| Fully opaque turquoise | `#40e0d0ff` |
-| Fully opaque black | `#000000ff` |
-| 50% transparent red | `#ff000080` |
-| Fully transparent | `#00000000` |
+| Written | Resolves to | Meaning |
+|---|---|---|
+| `#40e0d0ff` | `#40e0d0ff` | Fully opaque turquoise |
+| `#40e0d0` | `#40e0d0ff` | Same — alpha inferred as `ff` |
+| `#000000ff` | `#000000ff` | Fully opaque black |
+| `#ff000080` | `#ff000080` | 50% transparent red |
+| `#00000000` | `#00000000` | Fully transparent |
+| `transparent` | `#00000000` | Alias |
+| `cyan` | `#00ffffff ff` | CSS named color |
+| `green` | `#008000ff` | CSS named color |
 
-The keyword `transparent` is an alias for `#00000000`. It may be used anywhere a color value is expected.
+Parsers must normalize all color values to `#rrggbbaa` internally.
 
 **Rules:**
 - One entry per line: `<symbol> <color>`
-- `<color>` is `transparent` or an 8-digit RGBA hex string matching `^#[0-9a-f]{8}$`
-- Uppercase hex letters are invalid — colors must be lowercase
+- `<color>` is a color value: `#rrggbbaa`, `#rrggbb`, or a lowercase CSS named color
 - `.` (dot) conventionally means `transparent`; redefining it is allowed
 - Symbol pool: `. a-z A-Z 0-9 @ % ^ * + = _ | ~ < > [ ] { } ? ! - / : ; ( ) $ &`
   This gives up to 84 distinct colors per file
@@ -470,7 +486,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 12. `type` must be `normal`, `group`, or `tilemap` if present
 13. `opacity` must be a float in the range `0.0`–`1.0` if present
 14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
-15. Every `<color>` value must match `^#[0-9a-f]{8}$` or be the keyword `transparent`
+15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
 
 ---
 
