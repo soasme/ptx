@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.3**
+**Version 1.4.4**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -122,6 +122,7 @@ Parsers must normalize all color values to `#rrggbbaa` internally.
 - `.` (dot) conventionally means `transparent`; redefining it is allowed
 - Symbol pool: `. a-z A-Z 0-9 @ % ^ * + = _ | ~ < > [ ] { } ? ! - / : ; ( ) $ &`
   This gives up to 84 distinct colors per file
+- Explicitly excluded: `#` (comment marker), `\` (reserved for escaping), `"` and `'` (quoting characters) — using any of these as a palette symbol is a validation error
 
 ---
 
@@ -494,6 +495,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
 15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
 16. `bits_per_pixel` must be `8`, `16`, or `32` if present
+17. Palette symbols must not be `#`, `\`, `"`, or `'`
 
 ---
 

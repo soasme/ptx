@@ -4,6 +4,11 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.4
+
+- `#`, `\`, `"`, and `'` are explicitly excluded from the palette symbol pool and are validation errors if used as symbols.
+- Validation rule 17 added: palette symbols must not be `#`, `\`, `"`, or `'`.
+
 ## 1.4.3
 
 - `[meta] size WxH` replaced by two separate fields: `width <integer>` and `height <integer>`. Both are required.
