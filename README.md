@@ -6,7 +6,7 @@ PTX is a plain-text file format for pixel art — static or animated, small or l
 
 ## Documentation
 
-- [Specification](SPEC.md) — full format reference (current: v1.4.0)
+- [Specification](SPEC.md) — full format reference
 - [Changelog](CHANGELOG.md) — version history
 
 ## License
