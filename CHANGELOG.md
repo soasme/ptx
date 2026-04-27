@@ -4,6 +4,13 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.4.3
+
+- `[meta] size WxH` replaced by two separate fields: `width <integer>` and `height <integer>`. Both are required.
+- New `[meta]` field `bits_per_pixel`: `8` (indexed), `16` (grayscale), `32` (rgba). Default `32`.
+- Validation rule 4 updated: chunk coordinates checked against `width` × `height` instead of `size`.
+- Validation rule 16 added: `bits_per_pixel` must be `8`, `16`, or `32` if present.
+
 ## 1.4.2
 
 - Color type now supports three forms: `#rrggbbaa` (32-bit RGBA), `#rrggbb` (24-bit RGB, alpha inferred as `ff`), and lowercase CSS named colors (e.g. `transparent`, `green`, `cyan`).

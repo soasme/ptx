@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.2**
+**Version 1.4.3**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -39,15 +39,19 @@ Describes the overall sprite.
 
 ```
 [meta]
-size 128x128
-type animated       # static | animated
-tile_size 32        # chunk grid size; must be 1–32 (default 32)
+width 128
+height 128
+bits_per_pixel 32       # 8 (indexed) | 16 (grayscale) | 32 (rgba)
+type animated           # static | animated
+tile_size 32            # chunk grid size; must be 1–32 (default 32)
 background transparent
 ```
 
 | Key | Values | Default |
 |---|---|---|
-| `size` | `WxH` in pixels | required |
+| `width` | integer ≥ 1, sprite width in pixels | required |
+| `height` | integer ≥ 1, sprite height in pixels | required |
+| `bits_per_pixel` | `8` (indexed), `16` (grayscale), `32` (rgba) | `32` |
 | `type` | `static` \| `animated` | `static` |
 | `tile_size` | integer 1–32 | `32` |
 | `background` | color | `transparent` |
@@ -344,7 +348,9 @@ Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fil
 # Example: 128×128 animated character, walk cycle
 
 [meta]
-size 128x128
+width 128
+height 128
+bits_per_pixel 32
 type animated
 tile_size 32
 background transparent
@@ -475,7 +481,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 1. Every symbol used in any chunk grid must appear in `[palette]`
 2. Every grid row must have exactly `w` characters
 3. Every chunk must have exactly `h` rows
-4. Chunk coordinates must not exceed the sprite `size`
+4. Chunk coordinates must not exceed the sprite `width` × `height`
 5. Chunks must not overlap (within the same layer and frame)
 6. `tile_size` must be between 1 and 32 inclusive
 7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
@@ -487,6 +493,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 13. `opacity` must be a float in the range `0.0`–`1.0` if present
 14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
 15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
+16. `bits_per_pixel` must be `8`, `16`, or `32` if present
 
 ---
 
