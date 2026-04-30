@@ -4,6 +4,17 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.5.0
+
+- **Breaking:** Comment syntax changed from `#` to `//` (line comments) and `/* ... */` (block comments). Files using `#` comments must be updated.
+- `#` is no longer excluded from the palette symbol pool because it is a comment marker; it remains excluded because it conflicts with `#rrggbb` color syntax.
+- `tile_size` maximum raised from 32 to 64. Validation rule 6 updated.
+- Chunk maximum size raised from 32×32 to 64×64. Chunks need not be square — any rectangle up to 64×64 is valid.
+- `w` and `h` in `[chunk]` headers now accept values 1–64; they may differ.
+- Design principle 3 updated to reflect the new 64×64 = 4096 symbol ceiling.
+
+---
+
 ## 1.4.5
 
 - New `[animation <name>]` section: declares a named animation as an ordered frame sequence with `frames`, `loop_type`, and `loop_count` fields.

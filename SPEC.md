@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.4.5**
+**Version 1.5.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -11,7 +11,7 @@ PTX is a plain-text file format for representing and editing pixel art — stati
 
 1. **Human-readable and writable.** No indent requirements. No mandatory quoting. Structure is conveyed by section headers, not nesting.
 2. **Diff-friendly.** Every pixel, palette entry, layer, frame, and chunk is a line. Standard `diff`, `patch`, and `git` apply cleanly.
-3. **Model-friendly.** A coding model never needs to reason about more than 32×32 = 1024 symbols at a time. Big sprites are chunked.
+3. **Model-friendly.** A coding model never needs to reason about more than 64×64 = 4096 symbols at a time. Big sprites are chunked.
 4. **Thinking-first.** A special thinking layer lets models sketch a low-res mental map of a large sprite. It is never rendered.
 5. **Composable.** Layers, frames, and chunks are all first-class. Any combination is valid.
 
@@ -21,13 +21,13 @@ PTX is a plain-text file format for representing and editing pixel art — stati
 
 A `.ptx` file is a sequence of sections. Each section begins with a header line in square brackets. Sections may appear in any order, except that `[meta]` is conventionally first.
 
-Blank lines and lines beginning with `#` are ignored (comments).
+Blank lines and lines beginning with `//` are ignored (line comments). Block comments use `/* ... */` and may span multiple lines.
 
 ```
 [meta]
 [palette]
-[frame <name> duration=<ms>]   # one per frame — omit for static art
-[animation <name>]             # omit to use implicit default animation
+[frame <name> duration=<ms>]   // one per frame — omit for static art
+[animation <name>]             // omit to use implicit default animation
 [layer <name>]
 [chunk <id> ...]
 ```
@@ -42,9 +42,9 @@ Describes the overall sprite.
 [meta]
 width 128
 height 128
-bits_per_pixel 32       # 8 (indexed) | 16 (grayscale) | 32 (rgba)
-type animated           # static | animated
-tile_size 32            # chunk grid size; must be 1–32 (default 32)
+bits_per_pixel 32       // 8 (indexed) | 16 (grayscale) | 32 (rgba)
+type animated           // static | animated
+tile_size 32            // chunk grid size; must be 1–64 (default 32)
 background transparent
 ```
 
@@ -54,7 +54,7 @@ background transparent
 | `height` | integer ≥ 1, sprite height in pixels | required |
 | `bits_per_pixel` | `8` (indexed), `16` (grayscale), `32` (rgba) | `32` |
 | `type` | `static` \| `animated` | `static` |
-| `tile_size` | integer 1–32 | `32` |
+| `tile_size` | integer 1–64 | `32` |
 | `background` | color | `transparent` |
 
 ---
@@ -123,7 +123,7 @@ Parsers must normalize all color values to `#rrggbbaa` internally.
 - `.` (dot) conventionally means `transparent`; redefining it is allowed
 - Symbol pool: `. a-z A-Z 0-9 @ % ^ * + = _ | ~ < > [ ] { } ? ! - / : ; ( ) $ &`
   This gives up to 84 distinct colors per file
-- Explicitly excluded: `#` (comment marker), `\` (reserved for escaping), `"` and `'` (quoting characters) — using any of these as a palette symbol is a validation error
+- Explicitly excluded: `#` (color prefix — conflicts with `#rrggbb` color syntax), `\` (reserved for escaping), `"` and `'` (quoting characters) — using any of these as a palette symbol is a validation error
 
 ---
 
@@ -293,8 +293,8 @@ Thinking layers carry explicit metadata so parsers and models know exactly what 
 
 ```
 [layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
-# Each symbol = 4×4 real pixels. 32×32 grid covers full 128×128 sprite.
-# K = dark mass, W = skin, . = empty
+// Each symbol = 4×4 real pixels. 32×32 grid covers full 128×128 sprite.
+// K = dark mass, W = skin, . = empty
 
 [chunk thinking_full x=0 y=0 w=32 h=32 layer=thinking]
 ................................
@@ -324,7 +324,7 @@ Thinking layers are skipped entirely in the render pipeline (step 4 of the rende
 
 ## `[chunk <id> ...]`
 
-A chunk is a rectangular grid patch. All chunks have a maximum size of **32×32**. The minimum is **1×1**.
+A chunk is a rectangular grid patch. All chunks have a maximum size of **64×64**; chunks need not be square. The minimum is **1×1**.
 
 ### Header syntax
 
@@ -339,7 +339,7 @@ A chunk is a rectangular grid patch. All chunks have a maximum size of **32×32*
 |---|---|
 | `id` | Chunk identifier, e.g. `A1`, `B2`, `torso`, `eye_L` |
 | `x`, `y` | Top-left pixel coordinate within the sprite |
-| `w`, `h` | Width and height in pixels (1–32) |
+| `w`, `h` | Width and height in pixels (1–64); need not be equal |
 | `name` | Optional semantic label (e.g. `head`, `torso`, `left_arm`) |
 | `bg` | Optional background fill color for this chunk (hex or `transparent`) |
 | `layer` | Layer this chunk belongs to (default: first declared layer, or `base`) |
@@ -379,14 +379,16 @@ Semantic names like `head`, `torso`, `left_arm`, `eye_L` are encouraged when the
 
 ## Large Sprites — Chunking
 
-When a sprite exceeds 32×32 pixels, it must be broken into chunks. Each chunk covers at most 32×32 pixels.
+When a sprite exceeds the configured `tile_size`, it is broken into chunks. Each chunk covers at most `tile_size × tile_size` pixels (max 64×64); chunks need not be square.
 
-| Sprite size | Chunks needed |
-|---|---|
-| 32×32 | 1 (A1) |
-| 64×64 | 4 (A1 B1 A2 B2) |
-| 128×128 | 16 (A1–D4) |
-| 64×32 | 2 (A1 B1) |
+| Sprite size | tile_size | Chunks needed |
+|---|---|---|
+| 64×64 | 64 | 1 (A1) |
+| 128×128 | 64 | 4 (A1 B1 A2 B2) |
+| 256×256 | 64 | 16 (A1–D4) |
+| 128×64 | 64 | 2 (A1 B1) |
+| 64×64 | 32 | 4 (A1 B1 A2 B2) |
+| 128×128 | 32 | 16 (A1–D4) |
 
 Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fills any pixels not explicitly painted, so sparse grids stay compact.
 
@@ -395,7 +397,7 @@ Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fil
 ## Full Example
 
 ```ptx
-# Example: 128×128 animated character, walk cycle
+// Example: 128×128 animated character, walk cycle
 
 [meta]
 width 128
@@ -418,8 +420,8 @@ r #9f1f1f
 [frame walk_1 duration=90]
 [frame walk_2 duration=90]
 
-# Thinking layer — scale=4 means each symbol = 4×4 real pixels
-# 32×32 symbol grid covers the full 128×128 sprite
+// Thinking layer — scale=4 means each symbol = 4×4 real pixels
+// 32×32 symbol grid covers the full 128×128 sprite
 [layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
 
 [layer fill    order=10 blend=normal]
@@ -432,7 +434,7 @@ frame walk_2
 
 [layer light   order=30 blend=screen]
 
-# --- walk_1 frame, outline layer ---
+// --- walk_1 frame, outline layer ---
 
 [chunk A1 x=0 y=0 w=32 h=32 name=head layer=outline frame=walk_1]
 ................................
@@ -533,7 +535,7 @@ A coding model can be asked to "change the torso color from red to blue in frame
 3. Every chunk must have exactly `h` rows
 4. Chunk coordinates must not exceed the sprite `width` × `height`
 5. Chunks must not overlap (within the same layer and frame)
-6. `tile_size` must be between 1 and 32 inclusive
+6. `tile_size` must be between 1 and 64 inclusive
 7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
 8. Frame names referenced in chunks must be declared as `[frame ...]` headers
 9. Two layers may not share the same `order` value
