@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.5.0**
+**Version 1.5.1**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -43,7 +43,6 @@ Describes the overall sprite.
 width 128
 height 128
 bits_per_pixel 32       // 8 (indexed) | 16 (grayscale) | 32 (rgba)
-type animated           // static | animated
 tile_size 32            // chunk grid size; must be 1–64 (default 32)
 background transparent
 ```
@@ -53,7 +52,6 @@ background transparent
 | `width` | integer ≥ 1, sprite width in pixels | required |
 | `height` | integer ≥ 1, sprite height in pixels | required |
 | `bits_per_pixel` | `8` (indexed), `16` (grayscale), `32` (rgba) | `32` |
-| `type` | `static` \| `animated` | `static` |
 | `tile_size` | integer 1–64 | `32` |
 | `background` | color | `transparent` |
 
@@ -403,7 +401,6 @@ Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fil
 width 128
 height 128
 bits_per_pixel 32
-type animated
 tile_size 32
 background transparent
 

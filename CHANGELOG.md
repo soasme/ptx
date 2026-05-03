@@ -4,6 +4,12 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.5.1
+
+- Removed `type` (`static` | `animated`) from `[meta]`. Whether a file is static or animated is already determined by the presence or absence of `[frame]` sections; the field was redundant and could contradict the actual structure. Export format (sprite sheet vs. animated GIF) is an export-time decision, not a source property.
+
+---
+
 ## 1.5.0
 
 - **Breaking:** Comment syntax changed from `#` to `//` (line comments) and `/* ... */` (block comments). Files using `#` comments must be updated.
