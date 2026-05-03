@@ -4,6 +4,13 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.5.3
+
+- New `[meta]` field `version`: the PTX spec version this file conforms to (e.g. `1.5.3`). Optional; no default.
+- Validation rule 1 added: `version` must match `^\d+\.\d+\.\d+$` if present. Subsequent rules renumbered.
+
+---
+
 ## 1.5.2
 
 - Removed `tile_size` from `[meta]`. Each `[chunk]` already declares its own `w` and `h` explicitly; parsers render correctly without knowing the intended grid granularity. The 64×64 per-chunk hard cap (enforced per chunk) is the only limit that matters. Validation rule 6 removed and subsequent rules renumbered.
