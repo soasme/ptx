@@ -4,6 +4,12 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.5.2
+
+- Removed `tile_size` from `[meta]`. Each `[chunk]` already declares its own `w` and `h` explicitly; parsers render correctly without knowing the intended grid granularity. The 64×64 per-chunk hard cap (enforced per chunk) is the only limit that matters. Validation rule 6 removed and subsequent rules renumbered.
+
+---
+
 ## 1.5.1
 
 - Removed `type` (`static` | `animated`) from `[meta]`. Whether a file is static or animated is already determined by the presence or absence of `[frame]` sections; the field was redundant and could contradict the actual structure. Export format (sprite sheet vs. animated GIF) is an export-time decision, not a source property.

@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.5.1**
+**Version 1.5.2**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -43,7 +43,6 @@ Describes the overall sprite.
 width 128
 height 128
 bits_per_pixel 32       // 8 (indexed) | 16 (grayscale) | 32 (rgba)
-tile_size 32            // chunk grid size; must be 1–64 (default 32)
 background transparent
 ```
 
@@ -52,7 +51,6 @@ background transparent
 | `width` | integer ≥ 1, sprite width in pixels | required |
 | `height` | integer ≥ 1, sprite height in pixels | required |
 | `bits_per_pixel` | `8` (indexed), `16` (grayscale), `32` (rgba) | `32` |
-| `tile_size` | integer 1–64 | `32` |
 | `background` | color | `transparent` |
 
 ---
@@ -377,16 +375,16 @@ Semantic names like `head`, `torso`, `left_arm`, `eye_L` are encouraged when the
 
 ## Large Sprites — Chunking
 
-When a sprite exceeds the configured `tile_size`, it is broken into chunks. Each chunk covers at most `tile_size × tile_size` pixels (max 64×64); chunks need not be square.
+Large sprites are broken into chunks, each covering at most 64×64 pixels. Chunks need not be square.
 
-| Sprite size | tile_size | Chunks needed |
+| Sprite size | Chunk size | Chunks needed |
 |---|---|---|
-| 64×64 | 64 | 1 (A1) |
-| 128×128 | 64 | 4 (A1 B1 A2 B2) |
-| 256×256 | 64 | 16 (A1–D4) |
-| 128×64 | 64 | 2 (A1 B1) |
-| 64×64 | 32 | 4 (A1 B1 A2 B2) |
-| 128×128 | 32 | 16 (A1–D4) |
+| 64×64 | 64×64 | 1 (A1) |
+| 128×128 | 64×64 | 4 (A1 B1 A2 B2) |
+| 256×256 | 64×64 | 16 (A1–D4) |
+| 128×64 | 64×64 | 2 (A1 B1) |
+| 64×64 | 32×32 | 4 (A1 B1 A2 B2) |
+| 128×128 | 32×32 | 16 (A1–D4) |
 
 Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fills any pixels not explicitly painted, so sparse grids stay compact.
 
@@ -401,7 +399,6 @@ Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fil
 width 128
 height 128
 bits_per_pixel 32
-tile_size 32
 background transparent
 
 [palette]
@@ -532,22 +529,21 @@ A coding model can be asked to "change the torso color from red to blue in frame
 3. Every chunk must have exactly `h` rows
 4. Chunk coordinates must not exceed the sprite `width` × `height`
 5. Chunks must not overlap (within the same layer and frame)
-6. `tile_size` must be between 1 and 64 inclusive
-7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
-8. Frame names referenced in chunks must be declared as `[frame ...]` headers
-9. Two layers may not share the same `order` value
-10. `blend` must be one of: `normal multiply screen overlay darken lighten color_dodge color_burn hard_light soft_light difference exclusion hue saturation color luminosity addition subtract divide`
-11. `visible` must be `true` or `false` if present
-12. `type` must be `normal`, `group`, or `tilemap` if present
-13. `opacity` must be a float in the range `0.0`–`1.0` if present
-14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
-15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
-16. `bits_per_pixel` must be `8`, `16`, or `32` if present
-17. Palette symbols must not be `#`, `\`, `"`, or `'`
-18. Every frame name in an `[animation]` `frames` list must be declared as a `[frame ...]` header
-19. `loop_type` must be `forward`, `reverse`, `ping_pong`, or `ping_pong_reverse` if present
-20. `loop_count` must be a positive integer or `+inf` if present
-21. Animation names must be unique across the file
+6. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
+7. Frame names referenced in chunks must be declared as `[frame ...]` headers
+8. Two layers may not share the same `order` value
+9. `blend` must be one of: `normal multiply screen overlay darken lighten color_dodge color_burn hard_light soft_light difference exclusion hue saturation color luminosity addition subtract divide`
+10. `visible` must be `true` or `false` if present
+11. `type` must be `normal`, `group`, or `tilemap` if present
+12. `opacity` must be a float in the range `0.0`–`1.0` if present
+13. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
+14. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
+15. `bits_per_pixel` must be `8`, `16`, or `32` if present
+16. Palette symbols must not be `#`, `\`, `"`, or `'`
+17. Every frame name in an `[animation]` `frames` list must be declared as a `[frame ...]` header
+18. `loop_type` must be `forward`, `reverse`, `ping_pong`, or `ping_pong_reverse` if present
+19. `loop_count` must be a positive integer or `+inf` if present
+20. Animation names must be unique across the file
 
 ---
 
