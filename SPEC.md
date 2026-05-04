@@ -1,5 +1,5 @@
 # PTX — Pixel Text Exchange Format
-**Version 1.5.3**
+**Version 1.6.0**
 
 PTX is a plain-text file format for representing and editing pixel art — static or animated, small or large. It is designed to be read and written by humans, coding models, and standard text tooling alike.
 
@@ -12,8 +12,7 @@ PTX is a plain-text file format for representing and editing pixel art — stati
 1. **Human-readable and writable.** No indent requirements. No mandatory quoting. Structure is conveyed by section headers, not nesting.
 2. **Diff-friendly.** Every pixel, palette entry, layer, frame, and chunk is a line. Standard `diff`, `patch`, and `git` apply cleanly.
 3. **Model-friendly.** A coding model never needs to reason about more than 64×64 = 4096 symbols at a time. Big sprites are chunked.
-4. **Thinking-first.** A special thinking layer lets models sketch a low-res mental map of a large sprite. It is never rendered.
-5. **Composable.** Layers, frames, and chunks are all first-class. Any combination is valid.
+4. **Composable.** Layers, frames, and chunks are all first-class. Any combination is valid.
 
 ---
 
@@ -40,7 +39,7 @@ Describes the overall sprite.
 
 ```
 [meta]
-version 1.5.3
+version 1.6.0
 width 128
 height 128
 bits_per_pixel 32       // 8 (indexed) | 16 (grayscale) | 32 (rgba)
@@ -264,59 +263,13 @@ frame walk_1
 frame walk_2
 ```
 
-### Thinking Layer
-
-A layer named `thinking` (or prefixed `thinking_`) is a **non-rendered** sketch layer. It exists only as a model aid for reasoning about overall shape or composition. It is stripped at export time and never participates in compositing, regardless of `order` or `blend`.
-
-Thinking layers carry explicit metadata so parsers and models know exactly what the grid represents:
-
-```
-[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
-```
-
-| Attribute | Description | Default |
-|---|---|---|
-| `render` | Must be `false`. Marks this layer as non-rendered and export-stripped. | required |
-| `scale` | Each symbol in this layer's chunks represents an `N×N` block of real pixels. | `1` |
-| `size` | Grid dimensions for this layer's chunks in symbols (not pixels). `WxH` where `W = sprite_width / scale`, `H = sprite_height / scale`. | derived |
-| `purpose` | Free-form label describing what this layer models. Parsers ignore it; models use it. | — |
-
-**`scale` and real pixels:** A thinking layer with `scale=4` on a 128×128 sprite uses a 32×32 symbol grid. Each symbol covers a 4×4 pixel block. The layer gives a model a full-sprite overview in 1024 symbols instead of 16384.
-
-**`size` is advisory but explicit.** If `size` is omitted, parsers derive it as `(sprite_width / scale) x (sprite_height / scale)`. If provided, it must match — a mismatch is a validation error.
-
-**`render=false` is mandatory** on thinking layers. Parsers must reject any layer named `thinking` or `thinking_*` that omits `render=false`, to prevent accidental export.
-
-**`purpose`** is a model-readable label. Suggested values: `whole_sprite_silhouette`, `chunk_layout`, `animation_key_pose`, `color_zones`. Any value is valid; it is never interpreted by parsers.
-
-```
-[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
-// Each symbol = 4×4 real pixels. 32×32 grid covers full 128×128 sprite.
-// K = dark mass, W = skin, . = empty
-
-[chunk thinking_full x=0 y=0 w=32 h=32 layer=thinking]
-................................
-................................
-.............KKKKKK.............
-...........KKWWWWWWKK...........
-...........KWWWWWWWWK...........
-.............KKKKKK.............
-...........KKKRRRRKKKK..........
-.........KKKRRRRRRRRKKKK........
-................................
-................................
-```
-
-Thinking layers are skipped entirely in the render pipeline (step 4 of the render order summary).
-
 ### Render order summary
 
 1. Start with the sprite background color from `[meta]`
-2. Sort all non-thinking layers by `order` ascending
+2. Sort all layers by `order` ascending
 3. Skip layers where `visible=false`
 4. For each remaining layer (bottom to top): composite its chunks onto the canvas using `blend`
-5. Thinking layers are skipped entirely
-6. Output the final composited canvas per frame
+5. Output the final composited canvas per frame
 
 ---
 
@@ -398,7 +351,7 @@ Chunks tile the sprite with no gaps and no overlaps. A `bg` color on a chunk fil
 // Example: 128×128 animated character, walk cycle
 
 [meta]
-version 1.5.3
+version 1.6.0
 width 128
 height 128
 bits_per_pixel 32
@@ -416,10 +369,6 @@ r #9f1f1f
 [frame idle_1 duration=120]
 [frame walk_1 duration=90]
 [frame walk_2 duration=90]
-
-// Thinking layer — scale=4 means each symbol = 4×4 real pixels
-// 32×32 symbol grid covers the full 128×128 sprite
-[layer thinking render=false scale=4 size=32x32 purpose=whole_sprite_silhouette]
 
 [layer fill    order=10 blend=normal]
 frame walk_1
@@ -533,21 +482,20 @@ A coding model can be asked to "change the torso color from red to blue in frame
 4. Every chunk must have exactly `h` rows
 5. Chunk coordinates must not exceed the sprite `width` × `height`
 6. Chunks must not overlap (within the same layer and frame)
-7. Thinking layers must not be referenced by `[chunk]` entries that lack `layer=thinking`
-8. Frame names referenced in chunks must be declared as `[frame ...]` headers
-9. Two layers may not share the same `order` value
-10. `blend` must be one of: `normal multiply screen overlay darken lighten color_dodge color_burn hard_light soft_light difference exclusion hue saturation color luminosity addition subtract divide`
-11. `visible` must be `true` or `false` if present
-12. `type` must be `normal`, `group`, or `tilemap` if present
-13. `opacity` must be a float in the range `0.0`–`1.0` if present
-14. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
-15. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
-16. `bits_per_pixel` must be `8`, `16`, or `32` if present
-17. Palette symbols must not be `#`, `\`, `"`, or `'`
-18. Every frame name in an `[animation]` `frames` list must be declared as a `[frame ...]` header
-19. `loop_type` must be `forward`, `reverse`, `ping_pong`, or `ping_pong_reverse` if present
-20. `loop_count` must be a positive integer or `+inf` if present
-21. Animation names must be unique across the file
+7. Frame names referenced in chunks must be declared as `[frame ...]` headers
+8. Two layers may not share the same `order` value
+9. `blend` must be one of: `normal multiply screen overlay darken lighten color_dodge color_burn hard_light soft_light difference exclusion hue saturation color luminosity addition subtract divide`
+10. `visible` must be `true` or `false` if present
+11. `type` must be `normal`, `group`, or `tilemap` if present
+12. `opacity` must be a float in the range `0.0`–`1.0` if present
+13. `blend` and `opacity` are valid only on `normal` and `tilemap` layers; specifying either on a `group` layer is a validation error
+14. Every `<color>` value must match `^#[0-9a-f]{8}$`, `^#[0-9a-f]{6}$`, or be a lowercase CSS named color
+15. `bits_per_pixel` must be `8`, `16`, or `32` if present
+16. Palette symbols must not be `#`, `\`, `"`, or `'`
+17. Every frame name in an `[animation]` `frames` list must be declared as a `[frame ...]` header
+18. `loop_type` must be `forward`, `reverse`, `ping_pong`, or `ping_pong_reverse` if present
+19. `loop_count` must be a positive integer or `+inf` if present
+20. Animation names must be unique across the file
 
 ---
 

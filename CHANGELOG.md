@@ -4,6 +4,15 @@ All notable changes to the PTX specification are documented here.
 
 ---
 
+## 1.6.0
+
+- Removed the thinking layer concept entirely. The `thinking` / `thinking_*` layer name convention, `render`, `scale`, `size`, and `purpose` attributes, and associated render-pipeline skip are all dropped.
+- Design principle 4 ("Thinking-first") removed; principle 5 ("Composable") renumbered to 4.
+- Validation rule 7 (thinking layer / chunk reference check) removed; rules 8–21 renumbered to 7–20.
+- Render order summary step 5 ("Thinking layers are skipped entirely") removed; step 6 renumbered to 5. Step 2 updated to "Sort all layers" (was "Sort all non-thinking layers").
+
+---
+
 ## 1.5.3
 
 - New `[meta]` field `version`: the PTX spec version this file conforms to (e.g. `1.5.3`). Optional; no default.
